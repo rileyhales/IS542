@@ -5,31 +5,41 @@
     <title>IS 542 HW 2</title>
     <script src="fibonacci.js"></script>
     <script src="factorial.js"></script>
+    <script src="sumbetween.js"></script>
     <script src="coincounter.js"></script>
 </head>
 <body>
 
 <h1>IS 542 HW 2 - Riley Hales</h1>
 
-<a href="https://rileyhales.github.io/IS542/hw2/index.html">View This Page on Github Pages</a><br>
+<a href="https://rileyhales.github.io/IS542/hw2/index.html" target="_blank">View This Page on Github Pages</a>
+<br><br>
 
 <label for="fib-input">Get the I<sup>th</sup> Fibonacci Number</label>
 <input id="fib-input" type="number" placeholder="Enter an integer">
-<button onclick="fib(document.getElementById('fib-input').value)">Submit</button>
+<button onclick="fib(Number(document.getElementById('fib-input').value))">Submit</button>
 <br>
 <div id="fib-output"></div>
 <br>
 
 <label for="fact-input">Compute a Factorial</label>
 <input id="fact-input" type="number" placeholder="Enter an integer">
-<button onclick="factorial(document.getElementById('fact-input').value)">Submit</button>
+<button onclick="factorial(Number(document.getElementById('fact-input').value))">Submit</button>
 <br>
 <div id="fact-output"></div>
 <br>
 
+<label for="sum-input-lower">Sum of Integers between 2 Numbers</label>
+<input id="sum-input-lower" type="number" placeholder="Enter the smaller integer">
+<input id="sum-input-upper" type="number" placeholder="Enter the larger integer">
+<button onclick="sumBetween(Number(document.getElementById('sum-input-lower').value), Number(document.getElementById('sum-input-upper').value))">Submit</button>
+<br>
+<div id="sum-output"></div>
+<br>
+
 <label for="coin-input">Make Change</label>
 <input id="coin-input" type="number" placeholder="Enter an integer">
-<button onclick="makeChange(document.getElementById('coin-input').value)">Submit</button>
+<button onclick="makeChange(Number(document.getElementById('coin-input').value))">Submit</button>
 <br>
 <div id="coin-output-25"></div>
 <div id="coin-output-10"></div>

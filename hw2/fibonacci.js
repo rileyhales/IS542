@@ -1,20 +1,23 @@
 function fib(a) {
-    if (a === 0) {
-        return 0
+    if (a < 0) {
+        alert("Please enter a positive integer")
+        return
     }
-    if (a === 1) {
-        return 1
-    }
-    console.log(a);
 
     let previous2 = 0;
     let previous1 = 1;
     let current;
 
-    for (let i = 2; i <= a; i++) {
-        current = previous2 + previous1;
-        previous2 = new Number(previous1);
-        previous1 = new Number(current);
+    if (a === 0) {
+        current = 0
+    } else if (a === 1) {
+        current = 1
+    } else {
+        for (let i = 2; i <= a; i++) {
+            current = previous2 + previous1;
+            previous2 = new Number(previous1);
+            previous1 = new Number(current);
+        }
     }
 
     console.log(current);

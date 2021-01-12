@@ -1,6 +1,11 @@
 function makeChange(a) {
+    if (a < 0) {
+        alert("Please enter a positive integer")
+        return
+    }
     if (a === 0) {
         console.log("No change")
+        return
     }
 
     let balance = new Number(a);
