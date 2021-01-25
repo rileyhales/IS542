@@ -25,13 +25,14 @@ const validator = (function () {
             isValid = (Number.isInteger(txt) && txt >= 0);},
 
         isInRange: function (txt, m, n) {
+            // check if numeric, if numeric then compare to m & n
             if (!isNaN(txt)) {
                 if (m === undefined) {
-                    isValid = (txt < n);
+                    isValid = (txt <= n);
                 } else if (n === undefined) {
-                    isValid = (txt > m);
+                    isValid = (txt >= m);
                 } else {
-                    isValid = (txt > m && txt < n);
+                    isValid = (txt >= m && txt <= n);
                 }
             } else {
                 isValid = false;
@@ -41,22 +42,21 @@ const validator = (function () {
         isValidEmail: function (txt) {
             isValid = emailRegex.test(txt);},
 
-        // check that txt is string so only empty strings pass
+        // check that txt is string so only empty strings pass (e.g. not [])
         isNonEmpty: function (txt) {
             isValid = (typeof txt === "string" && txt.length > 0);},
 
         matchesRegex: function (txt, regex) {
             isValid = RegExp(regex).test(txt);},
 
-        // only > or <, not >= or <=
         lengthIsInRange: function (txt, m, n) {
             if (typeof txt === "string") {
                 if (m === undefined) {
-                    isValid = (txt.length < n);
+                    isValid = (txt.length <= n);
                 } else if (n === undefined) {
-                    isValid = (txt.length > m);
+                    isValid = (txt.length >= m);
                 } else {
-                    isValid = (txt.length > m && txt.length < n);
+                    isValid = (txt.length >= m && txt.length <= n);
                 }
             } else {
                 isValid = false;
@@ -133,7 +133,7 @@ const validator = (function () {
 // console.log(validator.isValid());
 
 // true false
-// need matches regex test
+// need tests for regex test
 
 // true false
 // validator.lengthIsInRange("asdf", 2, 5);
