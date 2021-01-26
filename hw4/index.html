@@ -1,37 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="hw4.js"></script>
 </head>
 <body>
 
 <h1>Information Form</h1>
-<form onsubmit="">
     <label for="first-name">First Name: </label>
-    <input id="first-name" type="text"><br>
+    <input id="first-name" type="text" placeholder="First"><br>
 
     <label for="last-name">Last Name: </label>
-    <input id="last-name" type="text"><br>
+    <input id="last-name" type="text" placeholder="Last"><br>
 
     <label for="age">Age: </label>
-    <input id="age" type="text"><br>
+    <input id="age" type="text" placeholder="25"><br>
 
     <label for="email">Email Address: </label>
-    <input id="email" type="text"><br>
+    <input id="email" type="text" placeholder="name@domain.com"><br>
 
     <label for="phone">Enter your Phone Number in 123-456-7890 format: </label>
-    <input id="phone" type="text"><br>
+    <input id="phone" type="text" placeholder="123-456-7890"><br>
 
     <label for="number">Enter a number between 50 and 100: </label>
-    <input id="number" type="number"><br>
+    <input id="number" type="text" placeholder="62"><br>
 
-    <button type="submit">Submit Form</button>
-</form>
+    <button type="submit" onclick="callValidator()">Submit Form</button><br>
 
-<div id="error-messages"></div>
-
-
-
-
+    <div id="validation-messages"></div>
 </body>
+
+<footer>
+    <script src="hw4.js"></script>
+</footer>
+
 </html>

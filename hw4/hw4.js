@@ -1,8 +1,8 @@
-const validator = (function (messageDivID) {
+const validator = (function () {
     // keeps track of most recent true/false check
     let isValid = true;
     let messages = [];
-    const messageDiv = document.getElementById(messageDivID);
+    const messageDiv = document.getElementById("validation-messages");
 
     // https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
     const emailRegex = /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
@@ -10,7 +10,12 @@ const validator = (function (messageDivID) {
     return {
         // for checking the age
         isPositiveInteger: function (txt) {
-            const check = (Number.isInteger(txt) && txt > 0);
+            if (isNaN(txt)) {
+                messages.push("Age must be a number");
+                isValid = false;
+                return
+            }
+            const check = (Number.isInteger(Number(txt)) && txt > 0);
             if (!check) {
                 messages.push("Please enter a positive integer for your age");
             }
@@ -52,7 +57,7 @@ const validator = (function (messageDivID) {
         isNonEmpty: function (txt) {
             const check = (typeof txt === "string" && txt.length > 0);
             if (!check) {
-                messages.push()
+                messages.push("Please enter both a first and last name")
             }
         },
 
@@ -82,13 +87,14 @@ const validator = (function (messageDivID) {
 }());
 
 function callValidator() {
-    // phone regexp from https://stackoverflow.com/questions/4338267/validate-phone-number-with-javascript
+    // https://stackoverflow.com/questions/4338267/validate-phone-number-with-javascript
+    const phoneRegExp = /^[(]{0,1}[0-9]{3}[)]{0,1}[-\s\.]{0,1}[0-9]{3}[-\s\.]{0,1}[0-9]{4}$/;
     validator.reset();
     validator.isNonEmpty(document.getElementById("first-name").value);
     validator.isNonEmpty(document.getElementById("last-name").value);
     validator.isPositiveInteger(document.getElementById("age").value);
     validator.isValidEmail(document.getElementById("email").value);
-    validator.matchesRegex(document.getElementById("phone").value, /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im);
+    validator.matchesRegex(document.getElementById("phone").value, phoneRegExp);
     validator.isInRange(document.getElementById("number").value, 50, 100);
     validator.isValid();
 }
