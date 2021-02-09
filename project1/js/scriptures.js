@@ -1,20 +1,24 @@
 /*========================================================================
  * FILE:    scriptures.js
- * AUTHOR:  Stephen W. Liddle
+ * AUTHOR:  Riley Hales as directed by Stephen W. Liddle
  * DATE:    Winter 2021
  *
  * DESCRIPTION: Front-end JavaScript code for the Scriptures, Mapped.
  *              IS 542, Winter 2021, BYU.
  */
 /*jslint
-    browser
-    long
+    browser, long
+*/
+/*global
+    console, map, google, window
 */
 /*property
     books, forEach, init, maxBookId, minBookId, onerror, onload, open, parse,
     push, response, send, status, classKey, content, href, id, numChapters,
     onerror, onload, open, parse, response, send, status, gridName, getElementById,
-    hash, innerHTML, fullName, split, slice, log, length, onHashChanged, tocName
+    hash, innerHTML, fullName, split, slice, log, length, onHashChanged, tocName,
+    position, title, label, animation, lat, lng, map, Animation, DROP, maps, Marker,
+    setMap, getElementsByClassName, every, location, parentBookId
 */
 
 const Scriptures = (function () {
@@ -32,8 +36,14 @@ const Scriptures = (function () {
     const CLASS_CHAPTER = "chapter";
     const CLASS_BUTTON = "btn";
     const CLASS_VOLUME = "volume";
+    const DIV_CRUMBS_NAV = "crumbnav";
     const DIV_SCRIPTURES_NAVIGATOR = "scripnav";
     const DIV_SCRIPTURES = "scriptures";
+    const INDEX_FLAG = 11;
+    const INDEX_LATITUDE = 3;
+    const INDEX_LONGITUDE = 4;
+    const INDEX_PLACENAME = 2;
+    const LAT_LON_PARSER = /\((.*),'(.*)',(.*),(.*),(.*),(.*),(.*),(.*),(.*),(.*),'(.*)'\)/;
     const REQUEST_GET = "GET";
     const REQUEST_STATUS_OK = 200;
     const REQUEST_STATUS_ERROR = 400;
@@ -44,18 +54,23 @@ const Scriptures = (function () {
      */
     let books;
     let volumes;
+    let gmMarkers = [];
 
     /*-------------------------------------------------------------------
      *                      PRIVATE METHOD DECLARATIONS
      */
     let ajax;
+    let addMarker;
     let bookChapterValid;
     let booksGrid;
     let booksGridContent;
+    let breadcrumbs;
     let cacheBooks;
     let chaptersGrid;
     let chaptersGridContent;
+    let clearMarkers;
     let encodedScripturesUrl;
+    let getCurrentHash;
     let getScripturesCallback;
     let getScripturesFailure;
     let hash;
@@ -69,8 +84,10 @@ const Scriptures = (function () {
     let navigateChapter;
     let navigateHome;
     let nextChapter;
-    let onHashChanged;
+    let onHashChange;
     let previousChapter;
+    let setupMarkers;
+    let showLocation;
     let titleForBookChapter;
     let volumesGridContent;
 
@@ -96,14 +113,31 @@ const Scriptures = (function () {
         let hrefString = (parameters.href === undefined ? "" : ` href="${parameters.href}"`);
         return `<a${idString}${classString}${hrefString}>${contentString}</a>`;
     };
-    htmlHashLink = function (hashArguments, title, content) {
-        return `<a href="javascript:void(0)" onclick="Scriptures.hash(${hashArguments})" title="${title}">${content}</a>`;
+    htmlHashLink = function (hashVol, hashBook, hashChap, title, content) {
+        return `<a href="javascript:void(0)" onclick="Scriptures.hash(${hashVol}, ${hashBook}, ${hashChap})" title="${title}">${content}</a>`;
     };
 
 
     /*-------------------------------------------------------------------
      *                      PRIVATE METHODS
      */
+    addMarker = function (name, lat, lon) {
+        let needToAddMarker = gmMarkers.every(function (marker) {
+            return marker.title !== name;
+        });
+        if (!needToAddMarker) {
+            return;
+        }
+
+        let marker = new google.maps.Marker({
+            position: {lat: Number(lat), lng: Number(lon)},
+            map,
+            title: name,
+            label: name,
+            animation: google.maps.Animation.DROP
+        });
+        gmMarkers.push(marker);
+    };
     ajax = function (url, successCallback, failureCallback, skipJsonParse) {
         let request = new XMLHttpRequest();
 
@@ -160,6 +194,24 @@ const Scriptures = (function () {
         return gridContent;
     };
 
+    breadcrumbs = function () {
+        let currentHash = getCurrentHash();
+        let crumbDiv = document.getElementById(DIV_CRUMBS_NAV);
+        crumbDiv.innerHTML = htmlHashLink(undefined, undefined, undefined, "Home", "Home");
+        if (currentHash === undefined) {
+            return;
+        }
+        if (currentHash.length >= 1) {
+            crumbDiv.innerHTML += ` > ${htmlHashLink(currentHash[0], undefined, undefined, volumes[currentHash[0] - 1].fullName, volumes[currentHash[0] - 1].fullName)}`;
+        }
+        if (currentHash.length >= 2) {
+            crumbDiv.innerHTML += ` > ${htmlHashLink(currentHash[0], currentHash[1], undefined, books[currentHash[1]].fullName, books[currentHash[1]].fullName)}`;
+        }
+        if (currentHash.length >= 3) {
+            crumbDiv.innerHTML += ` > ${htmlHashLink(currentHash[0], currentHash[1], currentHash[2], currentHash[2], currentHash[2])}`;
+        }
+    };
+
     chaptersGrid = function (book) {
         return htmlDiv({
             classKey: CLASS_BOOKS,
@@ -178,7 +230,7 @@ const Scriptures = (function () {
             gridContent += htmlLink({
                 classKey: `${CLASS_BUTTON} ${CLASS_CHAPTER}`,
                 id: chapter,
-                href: `#0:${book.id}:${chapter}`,
+                href: `#${book.parentBookId}:${book.id}:${chapter}`,
                 content: chapter
             });
             chapter += 1;
@@ -205,6 +257,13 @@ const Scriptures = (function () {
         }
     };
 
+    clearMarkers = function () {
+        gmMarkers.forEach(function (marker) {
+            marker.setMap(null);
+        });
+        gmMarkers = [];
+    };
+
     encodedScripturesUrl = function (bookId, chapter, verses, isJst) {
         if (bookId !== undefined && chapter !== undefined) {
             let options = "";
@@ -219,28 +278,35 @@ const Scriptures = (function () {
         }
     };
 
+    getCurrentHash = function () {
+        let currentHash = window.location.hash.slice(1).split(":");
+        if (currentHash.length === 1 && currentHash[0] === "") {
+            return undefined;
+        }
+        return currentHash;
+    };
+
     getScripturesCallback = function (chapterHtml) {
         document.getElementById(DIV_SCRIPTURES).innerHTML = chapterHtml;
 
         // Add the previous and next buttons
-        let currentHash = location.hash.slice(1).split(":");
+        let currentHash = getCurrentHash();
         let prevHash = previousChapter(Number(currentHash[1]), Number(currentHash[2]));
-        let previousButton = (prevHash === undefined ? "" : htmlHashLink([0, prevHash[0], prevHash[1]], prevHash[2], "Previous"));
+        let previousButton = (prevHash === undefined ? "" : htmlHashLink(prevHash[0], prevHash[1], prevHash[2], "Previous", "Previous"));
         let nextHash = nextChapter(Number(currentHash[1]), Number(currentHash[2]));
-        let nextButton = (nextHash === undefined ? "" : htmlHashLink([0, nextHash[0], nextHash[1]], nextHash[2], "Next"));
-        document.getElementsByClassName("divtitle")[0].innerHTML += `${previousButton}${nextButton}`;
+        let nextButton = (nextHash === undefined ? "" : htmlHashLink(nextHash[0], nextHash[1], nextHash[2], "Next", "Next"));
+        document.getElementsByClassName("divtitle")[0].innerHTML += `<br>${previousButton} ${nextButton}`;
 
-        // todo setupMarkers()
+        setupMarkers();
     };
 
     getScripturesFailure = function () {
         document.getElementById(DIV_SCRIPTURES).innerHTML = "Unable to retrieve chapter from database";
     };
 
-    hash = function () {
-        window.location.hash = `#${arguments[0]}:${arguments[1]}:${arguments[2]}`;
+    hash = function (volumeId, bookId, chapterId) {
+        window.location.hash = `#${(volumeId === undefined ? "" : volumeId)}${(bookId === undefined ? "" : ":" + bookId)}${(chapterId === undefined ? "" : ":" + chapterId)}`;
     };
-
 
     init = function (callback) {
         let booksLoaded = false;
@@ -286,12 +352,15 @@ const Scriptures = (function () {
         });
     };
 
-    onHashChanged = function () {
+    onHashChange = function () {
         let ids = [];
 
         if (location.hash !== "" && location.hash.length > 1) {
-            ids = location.hash.slice(1).split(":");
+            ids = getCurrentHash();
         }
+
+        clearMarkers();
+        breadcrumbs();
 
         if (ids.length <= 0) {
             navigateHome();
@@ -325,11 +394,11 @@ const Scriptures = (function () {
         let book = books[bookId];
         if (book !== undefined) {
             if (chapter > 1) {
-                return [bookId, chapter - 1, titleForBookChapter(book, chapter - 1)];
+                return [book.parentBookId, bookId, chapter - 1, titleForBookChapter(book, chapter - 1)];
             }
             let previousBook = books[bookId - 1];
             if (previousBook !== undefined) {
-                return [previousBook.id, previousBook.numChapters, titleForBookChapter(previousBook, previousBook.numChapters)];
+                return [previousBook.parentBookId, previousBook.id, previousBook.numChapters, titleForBookChapter(previousBook, previousBook.numChapters)];
             }
         }
     };
@@ -338,7 +407,7 @@ const Scriptures = (function () {
         let book = books[bookId];
         if (book !== undefined) {
             if (chapter < book.numChapters) {
-                return [bookId, chapter + 1, titleForBookChapter(book, chapter + 1)];
+                return [book.parentBookId, bookId, chapter + 1, titleForBookChapter(book, chapter + 1)];
             }
             let nextBook = books[bookId + 1];
             if (nextBook !== undefined) {
@@ -346,10 +415,33 @@ const Scriptures = (function () {
                 if (nextBook.numChapters > 0) {
                     nextChapterValue = 1;
                 }
-                return [nextBook.id, nextChapterValue, titleForBookChapter(nextBook, nextChapterValue)];
+                return [nextBook.parentBookId, nextBook.id, nextChapterValue, titleForBookChapter(nextBook, nextChapterValue)];
             }
         }
     };
+
+    setupMarkers = function () {
+        clearMarkers();
+
+        document.querySelectorAll("a[onclick^=\"showLocation(\"]").forEach(function (element) {
+            let matches = LAT_LON_PARSER.exec(element.getAttribute("onclick"));
+
+            if (matches) {
+                let placename = matches[INDEX_PLACENAME];
+                let flag = matches[INDEX_FLAG];
+                if (flag !== "") {
+                    placename += ` ${flag}`;
+                }
+
+                addMarker(placename, matches[INDEX_LATITUDE], matches[INDEX_LONGITUDE]);
+            }
+        });
+    };
+
+    showLocation = function (geotagId, placename, latitude, longitude, viewLatitude, viewLongitude, viewTilt, viewRoll, viewAltitude, viewHeading) {
+        map.panTo({lat: latitude, lng: longitude})
+        map.setZoom((viewAltitude >= 10 ? 10 : viewAltitude));
+    }
 
     titleForBookChapter = function (book, chapter) {
         if (book !== undefined) {
@@ -382,8 +474,9 @@ const Scriptures = (function () {
      */
     return {
         init,
-        onHashChanged,
-        hash
+        onHashChanged: onHashChange,
+        hash,
+        showLocation,
     };
 
 }());

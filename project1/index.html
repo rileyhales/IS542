@@ -12,19 +12,23 @@
     <meta property="og:url" content="">
     <meta property="og:image" content="">
 
-<!--    <link rel="manifest" href="site.webmanifest">-->
+    <!--    <link rel="manifest" href="site.webmanifest">-->
     <link rel="apple-touch-icon" href="icon.png">
     <!-- Place favicon.ico in the root directory -->
 
     <link rel="stylesheet" href="css/style.fromsite.css">
 
     <meta name="theme-color" content="#fafafa">
+
+    <!--  Modify with API Key  -->
+    <!--    <script src="https://maps.googleapis.com/maps/api/js?key="></script>-->
 </head>
 <body>
 
 <div id="header">
+    <div id="crumbnav"></div>
     <div id="centerhead">
-        <div class="title">The Scriptures, Mapped</div>
+        <div class="title"><a href="#">The Scriptures, Mapped</a></div>
         <div class="subtitle">By Stephen W. Liddle as recreated by Riley Hales</div>
     </div>
 </div>
@@ -36,6 +40,14 @@
 <script src="js/scriptures.js"></script>
 
 <script type="text/javascript">
+    let map;
+    let showLocation;
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: {lat: 31.7683, lng: 35.2137},
+            zoom: 8,
+        });
+    }
     function ready(readyListener) {
         if (document.readyState !== 'loading') {
             readyListener();
@@ -43,12 +55,13 @@
             document.addEventListener('DOMContentLoaded', readyListener);
         }
     }
+
     ready(function () {
+        initMap();
         Scriptures.init(() => Scriptures.onHashChanged())
         window.addEventListener("hashchange", Scriptures.onHashChanged)
+        showLocation = Scriptures.showLocation;
     })
-
-
 </script>
 
 </body>
