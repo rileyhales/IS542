@@ -12,16 +12,13 @@
     <meta property="og:url" content="">
     <meta property="og:image" content="">
 
-    <!--    <link rel="manifest" href="site.webmanifest">-->
-    <link rel="apple-touch-icon" href="icon.png">
-    <!-- Place favicon.ico in the root directory -->
-
-    <link rel="stylesheet" href="css/style.fromsite.css">
+    <link rel="stylesheet" href="css/style.css">
 
     <meta name="theme-color" content="#fafafa">
 
     <!--  Modify with API Key  -->
-    <!--    <script src="https://maps.googleapis.com/maps/api/js?key="></script>-->
+<!--    <script src="https://maps.googleapis.com/maps/api/js?key="></script>-->
+
 </head>
 <body>
 
@@ -58,8 +55,8 @@
 
     ready(function () {
         initMap();
-        Scriptures.init(() => Scriptures.onHashChanged())
-        window.addEventListener("hashchange", Scriptures.onHashChanged)
+        Scriptures.init(() => Scriptures.onHashChange())
+        window.addEventListener("hashchange", Scriptures.onHashChange)
         showLocation = Scriptures.showLocation;
     })
 </script>

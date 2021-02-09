@@ -7,7 +7,7 @@
  *              IS 542, Winter 2021, BYU.
  */
 /*jslint
-    browser, long
+    browser, long, fudge
 */
 /*global
     console, map, google, window
@@ -18,7 +18,9 @@
     onerror, onload, open, parse, response, send, status, gridName, getElementById,
     hash, innerHTML, fullName, split, slice, log, length, onHashChanged, tocName,
     position, title, label, animation, lat, lng, map, Animation, DROP, maps, Marker,
-    setMap, getElementsByClassName, every, location, parentBookId
+    setMap, getElementsByClassName, every, location, parentBookId, onHashChange,
+    showLocation, exec, getAttribute, querySelectorAll, panTo, setZoom, zoom,
+    LatLngBounds, fitBounds, extend
 */
 
 const Scriptures = (function () {
@@ -44,6 +46,10 @@ const Scriptures = (function () {
     const INDEX_LONGITUDE = 4;
     const INDEX_PLACENAME = 2;
     const LAT_LON_PARSER = /\((.*),'(.*)',(.*),(.*),(.*),(.*),(.*),(.*),(.*),(.*),'(.*)'\)/;
+    const LOCATION_AMERICAS = {lat: 0, lng: -82.25, zoom: 3};
+    const LOCATION_JERUSALEM = {lat: 31.7683, lng: 35.2137, zoom: 8};
+    const LOCATION_USA = {lat: 39.5, lng: -98.5833, zoom: 5};
+    const MAX_MARKER_ZOOM = 10;
     const REQUEST_GET = "GET";
     const REQUEST_STATUS_OK = 200;
     const REQUEST_STATUS_ERROR = 400;
@@ -66,6 +72,7 @@ const Scriptures = (function () {
     let booksGridContent;
     let breadcrumbs;
     let cacheBooks;
+    let changeHash;
     let chaptersGrid;
     let chaptersGridContent;
     let clearMarkers;
@@ -73,7 +80,6 @@ const Scriptures = (function () {
     let getCurrentHash;
     let getScripturesCallback;
     let getScripturesFailure;
-    let hash;
     let htmlAnchor;
     let htmlDiv;
     let htmlElement;
@@ -90,9 +96,10 @@ const Scriptures = (function () {
     let showLocation;
     let titleForBookChapter;
     let volumesGridContent;
+    let zoomMap;
 
     /*-------------------------------------------------------------------
-     *                      HTML BUILDING FUNCTIONS
+     *                      (PRIVATE) HTML BUILDING FUNCTIONS
      */
     htmlAnchor = function (volume) {
         return `<a name="v${volume.id}" />`;
@@ -119,9 +126,10 @@ const Scriptures = (function () {
 
 
     /*-------------------------------------------------------------------
-     *                      PRIVATE METHODS
+     *                      (PRIVATE) GOOGLE MAPS METHODS
      */
     addMarker = function (name, lat, lon) {
+        // checks that no existing marker has the same name: collaboration with Kyler Ashby also in the class
         let needToAddMarker = gmMarkers.every(function (marker) {
             return marker.title !== name;
         });
@@ -138,6 +146,60 @@ const Scriptures = (function () {
         });
         gmMarkers.push(marker);
     };
+
+    setupMarkers = function () {
+        clearMarkers();
+        document.querySelectorAll("a[onclick^=\"showLocation(\"]").forEach(function (element) {
+            let matches = LAT_LON_PARSER.exec(element.getAttribute("onclick"));
+
+            if (matches) {
+                let placename = matches[INDEX_PLACENAME];
+                let flag = matches[INDEX_FLAG];
+                if (flag !== "") {
+                    placename += ` ${flag}`;
+                }
+
+                addMarker(placename, matches[INDEX_LATITUDE], matches[INDEX_LONGITUDE]);
+            }
+        });
+        zoomMap();
+    };
+
+    showLocation = function (geotagId, placename, latitude, longitude, viewLatitude, viewLongitude, viewTilt, viewRoll, viewAltitude, viewHeading) {
+        map.panTo({lat: latitude, lng: longitude});
+        map.setZoom((viewAltitude >= MAX_MARKER_ZOOM ? MAX_MARKER_ZOOM : viewAltitude));
+    };
+
+    zoomMap = function () {
+        if (gmMarkers.length <= 0) {
+            let currentHash = getCurrentHash();
+            if (currentHash === undefined || currentHash[0] <= 2) {
+                // if there is no hash or we're in one of the bible volumes, zoom to jerusalem
+                map.panTo(LOCATION_JERUSALEM);
+                map.setZoom(LOCATION_JERUSALEM.zoom);
+            } else if (Number(currentHash [0]) === 3) {
+                // if hash indicates we're in the Book of Mormon, zoom to "americas"
+                map.panTo(LOCATION_AMERICAS);
+                map.setZoom(LOCATION_AMERICAS.zoom);
+            } else if (Number(currentHash [0]) === 4 || Number(currentHash[0]) === 5) {
+                // if hash indicates we're in D&C or PGP, zoom to USA
+                map.panTo(LOCATION_USA);
+                map.setZoom(LOCATION_USA.zoom);
+            }
+        } else if (gmMarkers.length === 1) {
+            map.panTo(gmMarkers[0].position);
+            map.setZoom(MAX_MARKER_ZOOM);
+        } else {
+            let bounds = new google.maps.LatLngBounds();
+            gmMarkers.forEach(function (marker) {bounds.extend(marker.position)});
+            map.fitBounds(bounds);
+        }
+    };
+
+    /*-------------------------------------------------------------------
+     *         REMAINING PRIVATE METHODS (NAVIGATION STUFF), ALPHABETICAL
+     */
+
     ajax = function (url, successCallback, failureCallback, skipJsonParse) {
         let request = new XMLHttpRequest();
 
@@ -289,7 +351,7 @@ const Scriptures = (function () {
     getScripturesCallback = function (chapterHtml) {
         document.getElementById(DIV_SCRIPTURES).innerHTML = chapterHtml;
 
-        // Add the previous and next buttons
+        // Add the previous and next buttons (Collaborated with Kyler Ashby, also in the class)
         let currentHash = getCurrentHash();
         let prevHash = previousChapter(Number(currentHash[1]), Number(currentHash[2]));
         let previousButton = (prevHash === undefined ? "" : htmlHashLink(prevHash[0], prevHash[1], prevHash[2], "Previous", "Previous"));
@@ -304,7 +366,7 @@ const Scriptures = (function () {
         document.getElementById(DIV_SCRIPTURES).innerHTML = "Unable to retrieve chapter from database";
     };
 
-    hash = function (volumeId, bookId, chapterId) {
+    changeHash = function (volumeId, bookId, chapterId) {
         window.location.hash = `#${(volumeId === undefined ? "" : volumeId)}${(bookId === undefined ? "" : ":" + bookId)}${(chapterId === undefined ? "" : ":" + chapterId)}`;
     };
 
@@ -352,6 +414,23 @@ const Scriptures = (function () {
         });
     };
 
+    nextChapter = function (bookId, chapter) {
+        let book = books[bookId];
+        if (book !== undefined) {
+            if (chapter < book.numChapters) {
+                return [book.parentBookId, bookId, chapter + 1, titleForBookChapter(book, chapter + 1)];
+            }
+            let nextBook = books[bookId + 1];
+            if (nextBook !== undefined) {
+                let nextChapterValue = 0;
+                if (nextBook.numChapters > 0) {
+                    nextChapterValue = 1;
+                }
+                return [nextBook.parentBookId, nextBook.id, nextChapterValue, titleForBookChapter(nextBook, nextChapterValue)];
+            }
+        }
+    };
+
     onHashChange = function () {
         let ids = [];
 
@@ -388,6 +467,7 @@ const Scriptures = (function () {
                 }
             }
         }
+        zoomMap();
     };
 
     previousChapter = function (bookId, chapter) {
@@ -402,46 +482,6 @@ const Scriptures = (function () {
             }
         }
     };
-
-    nextChapter = function (bookId, chapter) {
-        let book = books[bookId];
-        if (book !== undefined) {
-            if (chapter < book.numChapters) {
-                return [book.parentBookId, bookId, chapter + 1, titleForBookChapter(book, chapter + 1)];
-            }
-            let nextBook = books[bookId + 1];
-            if (nextBook !== undefined) {
-                let nextChapterValue = 0;
-                if (nextBook.numChapters > 0) {
-                    nextChapterValue = 1;
-                }
-                return [nextBook.parentBookId, nextBook.id, nextChapterValue, titleForBookChapter(nextBook, nextChapterValue)];
-            }
-        }
-    };
-
-    setupMarkers = function () {
-        clearMarkers();
-
-        document.querySelectorAll("a[onclick^=\"showLocation(\"]").forEach(function (element) {
-            let matches = LAT_LON_PARSER.exec(element.getAttribute("onclick"));
-
-            if (matches) {
-                let placename = matches[INDEX_PLACENAME];
-                let flag = matches[INDEX_FLAG];
-                if (flag !== "") {
-                    placename += ` ${flag}`;
-                }
-
-                addMarker(placename, matches[INDEX_LATITUDE], matches[INDEX_LONGITUDE]);
-            }
-        });
-    };
-
-    showLocation = function (geotagId, placename, latitude, longitude, viewLatitude, viewLongitude, viewTilt, viewRoll, viewAltitude, viewHeading) {
-        map.panTo({lat: latitude, lng: longitude})
-        map.setZoom((viewAltitude >= 10 ? 10 : viewAltitude));
-    }
 
     titleForBookChapter = function (book, chapter) {
         if (book !== undefined) {
@@ -474,9 +514,9 @@ const Scriptures = (function () {
      */
     return {
         init,
-        onHashChanged: onHashChange,
-        hash,
-        showLocation,
+        onHashChange,
+        hash: changeHash,
+        showLocation
     };
 
 }());
