@@ -20,7 +20,7 @@
     position, title, label, animation, lat, lng, map, Animation, DROP, maps, Marker,
     setMap, getElementsByClassName, every, location, parentBookId, onHashChange,
     showLocation, exec, getAttribute, querySelectorAll, panTo, setZoom, zoom,
-    LatLngBounds, fitBounds, extend
+    LatLngBounds, fitBounds, extend, text, includes
 */
 
 const Scriptures = (function () {
@@ -129,11 +129,17 @@ const Scriptures = (function () {
      *                      (PRIVATE) GOOGLE MAPS METHODS
      */
     addMarker = function (name, lat, lon) {
-        // checks that no existing marker has the same name: collaboration with Kyler Ashby also in the class
-        let needToAddMarker = gmMarkers.every(function (marker) {
-            return marker.title !== name;
+        let needNewMarker = gmMarkers.every(function (existingMarker) {
+            if (Number(lat) === existingMarker.position.lat() && Number(lon) === existingMarker.position.lng()) {
+                if (!existingMarker.label.includes(name)) {
+                    existingMarker.label += `, ${name}`;
+                }
+                return false;
+            }
+            return true;
         });
-        if (!needToAddMarker) {
+
+        if (!needNewMarker) {
             return;
         }
 
@@ -173,16 +179,17 @@ const Scriptures = (function () {
     zoomMap = function () {
         if (gmMarkers.length <= 0) {
             let currentHash = getCurrentHash();
-            if (currentHash === undefined || currentHash[0] <= 2) {
-                // if there is no hash or we're in one of the bible volumes, zoom to jerusalem
+            currentHash = (currentHash === undefined ? 0 : Number(currentHash[0]));
+            if (currentHash[0] <= 2 || currentHash === 5) {
+                // if there is no hash or we're in one of the bible volumes or PGP zoom to jerusalem
                 map.panTo(LOCATION_JERUSALEM);
                 map.setZoom(LOCATION_JERUSALEM.zoom);
-            } else if (Number(currentHash [0]) === 3) {
+            } else if (currentHash [0] === 3) {
                 // if hash indicates we're in the Book of Mormon, zoom to "americas"
                 map.panTo(LOCATION_AMERICAS);
                 map.setZoom(LOCATION_AMERICAS.zoom);
-            } else if (Number(currentHash [0]) === 4 || Number(currentHash[0]) === 5) {
-                // if hash indicates we're in D&C or PGP, zoom to USA
+            } else if (currentHash [0] === 4) {
+                // if hash indicates we're in D&C, zoom to USA
                 map.panTo(LOCATION_USA);
                 map.setZoom(LOCATION_USA.zoom);
             }
