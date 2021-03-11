@@ -1,0 +1,16 @@
+This project taught me about writing both good functions and useful functions. I found myself rewriting a few of my
+functions so that they were more generic and able to handle all the cases i needed them to. While i was trying to build
+the next/previous chapter buttons and breadcrumbs, I felt like i needed to rewrite the ajax function so i could pass
+more arguments about the request and use that. eventually i realized i could just have all my functions read the hash.
+I think i was worried about writing really inefficient code but i found that this was much faster. I thought about
+writing the parts of the hash to a private variable in the Scriptures object every time the hash changed but ultimately
+settled on writing a function for parsing the hash which can be called everywhere else that i need it. I think the
+whole time that i was trying to write a bunch of super customizable functions "good" functions when really what i
+needed was to just write a few really useful functions that make the more complicated functions easier to write.
+
+In addition to fulfilling all the requirements on the rubric, i implemented the breadcrumbs navigation and made the map
+zoom to the americas when you're viewing the Book of Mormon and the Doctrine and Covenants. There aren't many, if any,
+tags with georeferencing in the book of mormon but i thought it would still be useful to move the map still for context.
+I worked with Kyler in our class on figuring out some of the hard parts that weren't included in the videos and that
+was very helpful. I think thats what really helped me finish the code make it as efficient as it is. I'm looking
+forward to learning the styling parts.

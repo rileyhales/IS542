@@ -1,0 +1,15 @@
+This assignment was difficult because I didn't know how to use promises. It took me a lot of reading and some practice
+to figure out how to chain together the ".then()" functions. Once i got the hang of that, it wasn't too hard to figure
+out how to replace the ajax function with fetch code. I tried replacing the contents of the ajax function with equivalent
+fetch code and also replacing every time i used the ajax function with fetch code. I thought it made a bit more sense
+to remove the ajax function and put fetch code directly into the other functions where i needed it. However that's
+probably only true because there are 3 total places where i need it in the app. If i needed it more extensively then
+wrapping my fetch code with the ajax function would make more sense. I ultimately just replaced the ajax function's code
+with the with fetch code instead of the XML Http request.
+
+In comparing my solution to yours, I was happy to see that the way I did the breadcrumbs navigation was very similar to
+you. My function for injectBreadcrumbs was very similar. However, i call that function only once as part of the event
+for onHashChanged rather than from within each of the navigation changing functions. One place we differed was in not
+having duplicate markers. I checked that the markers' latitudes and longitudes were exactly the same. I assumed that
+since the numbers and the number of decimal points are pretty small, it would probably be safe to compare the numbers
+directly.

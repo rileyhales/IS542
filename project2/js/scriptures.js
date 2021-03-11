@@ -85,6 +85,7 @@ const Scriptures = (function () {
     let htmlElement;
     let htmlHashLink;
     let htmlLink;
+    let htmlNextButton;
     let init;
     let navigateBook;
     let navigateChapter;
@@ -123,7 +124,9 @@ const Scriptures = (function () {
     htmlHashLink = function (hashVol, hashBook, hashChap, title, content) {
         return `<a href="javascript:void(0)" onclick="Scriptures.hash(${hashVol}, ${hashBook}, ${hashChap})" title="${title}">${content}</a>`;
     };
-
+    htmlNextButton = function (hashVol, hashBook, hashChap, nextprevious) {
+        return `<a href="javascript:void(0)" onclick="Scriptures.transition(${hashVol}, ${hashBook}, ${hashChap}, '${nextprevious}')" title="${nextprevious}">${nextprevious}</a>`;
+    };
 
     /*-------------------------------------------------------------------
      *                      (PRIVATE) GOOGLE MAPS METHODS
@@ -199,7 +202,7 @@ const Scriptures = (function () {
         } else {
             let bounds = new google.maps.LatLngBounds();
             gmMarkers.forEach(function (marker) {
-                bounds.extend(marker.position)
+                bounds.extend(marker.position);
             });
             map.fitBounds(bounds);
         }
@@ -352,22 +355,70 @@ const Scriptures = (function () {
         return currentHash;
     };
 
-    getScripturesCallback = function (chapterHtml) {
-        document.getElementById(DIV_SCRIPTURES).innerHTML = chapterHtml;
+    const DIV_SCRIP1 = "scrip1";
+    const DIV_SCRIP2 = "scrip2";
+    let scripDivOnScreen = DIV_SCRIP1;
+    let scripDivOffScreen = DIV_SCRIP2;
+    const ANIMATE_TIME = 500;
+    let animateType = "crossfade";
 
-        // Add the previous and next buttons (Collaborated with Kyler Ashby, also in the class)
+    let transition = function (volume, book, chapter, nextprevious) {
+        animateType = nextprevious;
+        changeHash(volume, book, chapter);
+    }
+    let crossfade = function () {
+        $(`#${scripDivOffScreen}`).css({"left": "0px", "opacity": 0})
+        $(`#${scripDivOffScreen}`).animate({"opacity": 1, "z-index": 2}, {"duration": ANIMATE_TIME})
+        $(`#${scripDivOnScreen}`).animate({"opacity": 0, "z-index": 1}, {"duration": ANIMATE_TIME})
+        switchVisibleDivTracker();
+    }
+
+    let switchVisibleDivTracker = function () {
+        if (scripDivOnScreen === DIV_SCRIP1) {
+            scripDivOnScreen = DIV_SCRIP2;
+            scripDivOffScreen = DIV_SCRIP1;
+        } else {
+            scripDivOnScreen = DIV_SCRIP1;
+            scripDivOffScreen = DIV_SCRIP2;
+        }
+    }
+
+    getScripturesCallback = function (chapterHtml) {
+        // Generate the next/previous buttons
         let currentHash = getCurrentHash();
         let prevHash = previousChapter(Number(currentHash[1]), Number(currentHash[2]));
-        let previousButton = (prevHash === undefined ? "" : htmlHashLink(prevHash[0], prevHash[1], prevHash[2], "Previous", "Previous"));
+        let previousButton = (prevHash === undefined ? "" : htmlNextButton(prevHash[0], prevHash[1], prevHash[2], "Previous"));
         let nextHash = nextChapter(Number(currentHash[1]), Number(currentHash[2]));
-        let nextButton = (nextHash === undefined ? "" : htmlHashLink(nextHash[0], nextHash[1], nextHash[2], "Next", "Next"));
-        document.getElementsByClassName("divtitle")[0].innerHTML += `<br>${previousButton} ${nextButton}`;
+        let nextButton = (nextHash === undefined ? "" : htmlNextButton(nextHash[0], nextHash[1], nextHash[2], "Next"));
 
+        // assign content and next/previous buttons to offscreen div
+        let offscreendiv = document.getElementById(scripDivOffScreen);
+        offscreendiv.innerHTML = chapterHtml;
+        offscreendiv.getElementsByClassName("divtitle")[0].innerHTML += `<br>${previousButton} ${nextButton}`;
+
+        // handle the sliding animations
+        let width = $("#scriptures").width();
+        if (animateType === "Next") {
+            $(`#${scripDivOffScreen}`).css({"left": `${width}px`, "opacity": 1});
+            $(`#${scripDivOnScreen}`).animate({"left": `-${width}px`}, {"duration": ANIMATE_TIME});
+            $(`#${scripDivOffScreen}`).animate({"left": "0px"}, {"duration": ANIMATE_TIME});
+            switchVisibleDivTracker();
+        } else if (animateType === "Previous") {
+            $(`#${scripDivOffScreen}`).css({"left": `-${width}px`, "opacity": 1});
+            $(`#${scripDivOnScreen}`).animate({"left": `${width}px`}, {"duration": ANIMATE_TIME});
+            $(`#${scripDivOffScreen}`).animate({"left": "0px"}, {"duration": ANIMATE_TIME});
+            switchVisibleDivTracker();
+        } else if (animateType === "crossfade") {
+            crossfade();
+        }
+
+        animateType = "crossfade";
         setupMarkers();
     };
 
-    getScripturesFailure = function () {
-        document.getElementById(DIV_SCRIPTURES).innerHTML = "Unable to retrieve chapter from database";
+    getScripturesFailure = function (err) {
+        console.log(err);
+        document.getElementById(scripDivOnScreen).innerHTML = "Unable to retrieve chapter from database";
     };
 
     changeHash = function (volumeId, bookId, chapterId) {
@@ -379,17 +430,21 @@ const Scriptures = (function () {
         let volumesLoaded = false;
 
         fetch(URL_BOOKS)
-            .then(response => {return response.json()})
+            .then(response => {
+                return response.json()
+            })
             .then(function (data) {
-            books = data;
-            booksLoaded = true;
+                books = data;
+                booksLoaded = true;
 
-            if (volumesLoaded) {
-                cacheBooks(callback);
-            }
-        });
+                if (volumesLoaded) {
+                    cacheBooks(callback);
+                }
+            });
         fetch(URL_VOLUMES)
-            .then(response => {return response.json()})
+            .then(response => {
+                return response.json()
+            })
             .then(function (data) {
                 volumes = data;
                 volumesLoaded = true;
@@ -397,7 +452,7 @@ const Scriptures = (function () {
                 if (booksLoaded) {
                     cacheBooks(callback);
                 }
-        });
+            });
     };
 
     navigateBook = function (bookId) {
@@ -405,24 +460,32 @@ const Scriptures = (function () {
         if (book.numChapters <= 1) {
             navigateChapter(bookId, book.numChapters);
         } else {
-            document.getElementById(DIV_SCRIPTURES).innerHTML = htmlDiv({
-                id: DIV_SCRIPTURES,
+            document.getElementById(scripDivOffScreen).innerHTML = htmlDiv({
+                id: "NAVIGATION",
                 content: chaptersGrid(book)
             });
+            crossfade();
         }
     };
     navigateChapter = function (bookId, chapter) {
         fetch(encodedScripturesUrl(bookId, chapter))
-            .then(response => {return response.text()})
-            .then(data => {getScripturesCallback(data)})
-            .catch(error => {getScripturesFailure(error)})
+            .then(response => {
+                return response.text()
+            })
+            .then(data => {
+                getScripturesCallback(data)
+            })
+            .catch(error => {
+                getScripturesFailure(error)
+            })
     };
 
     navigateHome = function (volumeId) {
-        document.getElementById(DIV_SCRIPTURES).innerHTML = htmlDiv({
+        document.getElementById(scripDivOffScreen).innerHTML = htmlDiv({
             id: DIV_SCRIPTURES_NAVIGATOR,
             content: volumesGridContent(volumeId)
         });
+        crossfade();
     };
 
     nextChapter = function (bookId, chapter) {
@@ -527,7 +590,8 @@ const Scriptures = (function () {
         init,
         onHashChange,
         hash: changeHash,
-        showLocation
+        showLocation,
+        transition,
     };
 
 }());
