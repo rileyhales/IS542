@@ -6,7 +6,7 @@ html {
 
 body {
     color: #222;
-    background-color: rgb(236,226,217);
+    background-color: rgb(236, 226, 217);
     margin: 0;
     padding: 0;
     min-height: 100%;
@@ -23,12 +23,12 @@ img {
     top: 0;
     left: 0;
     right: 0;
-    background-color: #3f2000;
+    background-color: #58310d;
     color: white;
     height: 56px;
     display: flex;
     flex-direction: row;
-    box-shadow: 0 2px 5px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
     align-items: center;
     z-index: 10000;
 }
@@ -76,28 +76,12 @@ div.subtitle {
     padding: .5em;
 }
 
-#scriptures {
-    min-width: 220px;
-    max-width: 440px;
-    flex: 1 1 30%;
-    height: 100%;
-    min-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    border-right: 1px solid #aaa;
-    position: relative;
-}
-
 #scripnav {
     position: absolute;
     max-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
     width: 100%;
-}
-
-#map {
-    flex: 1 1 70%;
 }
 
 .volume {
@@ -112,6 +96,7 @@ div.books {
     justify-content: center;
     padding: 0 .3em;
     margin: 0;
+    background-color: #fff;
 }
 
 div.books a {
@@ -120,8 +105,8 @@ div.books a {
     margin: .4em;
     padding-left: .5em;
     padding-right: .5em;
-    background-color: #fff;
-    color: #222;
+    background-color: #d8d6d6;
+    color: black;
 }
 
 div.books a.chapter {
@@ -276,4 +261,74 @@ li.match {
     position: absolute;
     height: 100%;
     width: 100%;
+}
+
+#divtitle {
+    padding: 1em;
+}
+
+#crumbnav {
+    padding: 1.5em;
+    font-weight: bold;
+}
+
+#scriptures {
+    flex: 1 1 35%;
+    min-height: 100%;
+    position: relative;
+}
+
+@media (min-width: 726px) {
+    #scriptures {
+        flex: 1 1 35%;
+        height: 100%;
+        min-height: 100%;
+        position: relative;
+        min-width: 220px;
+        max-width: 440px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        border-right: 1px solid #aaa;
+    }
+
+    #map {
+        flex: 1 1 65%;
+    }
+}
+
+@media (max-width: 725px) {
+    #content {
+        flex-direction: column;
+    }
+
+    #centerhead {
+        display: none;
+    }
+
+    #scriptures {
+        height: 50%;
+        min-height: 50%;
+        max-height: 50%;
+        width: 100%;
+        min-width: 100%;
+        display: block;
+
+        flex: 1 1 70%;
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+        border-bottom: 1px solid #aaaaaa;
+    }
+
+    #map {
+        height: 50%;
+        min-height: 50%;
+        max-height: 50%;
+        width: 100%;
+        min-width: 100%;
+        display: block;
+
+        flex: 1 1 40%;
+        flex-direction: column;
+    }
 }

@@ -359,7 +359,7 @@ const Scriptures = (function () {
     const DIV_SCRIP2 = "scrip2";
     let scripDivOnScreen = DIV_SCRIP1;
     let scripDivOffScreen = DIV_SCRIP2;
-    const ANIMATE_TIME = 500;
+    const ANIMATE_TIME = 350;
     let animateType = "crossfade";
 
     let transition = function (volume, book, chapter, nextprevious) {
@@ -461,7 +461,7 @@ const Scriptures = (function () {
             navigateChapter(bookId, book.numChapters);
         } else {
             document.getElementById(scripDivOffScreen).innerHTML = htmlDiv({
-                id: "NAVIGATION",
+                id: "divtitle",
                 content: chaptersGrid(book)
             });
             crossfade();
