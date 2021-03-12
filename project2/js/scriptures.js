@@ -10,7 +10,7 @@
     browser, long, fudge
 */
 /*global
-    console, map, google, window
+    console, map, google, window, $
 */
 /*property
     books, forEach, init, maxBookId, minBookId, onerror, onload, open, parse,
@@ -20,7 +20,8 @@
     position, title, label, animation, lat, lng, map, Animation, DROP, maps, Marker,
     setMap, getElementsByClassName, every, location, parentBookId, onHashChange,
     showLocation, exec, getAttribute, querySelectorAll, panTo, setZoom, zoom,
-    LatLngBounds, fitBounds, extend, text, includes
+    LatLngBounds, fitBounds, extend, text, includes, then, css, opacity, left, panTo,
+    animate, numChapters, parentBookId, gridName, width
 */
 
 const Scriptures = (function () {
@@ -29,10 +30,7 @@ const Scriptures = (function () {
     /*-------------------------------------------------------------------
      *                      CONSTANTS
      */
-    const URL_BASE = "https://scriptures.byu.edu/";
-    const URL_BOOKS = `${URL_BASE}mapscrip/model/books.php`;
-    const URL_VOLUMES = `${URL_BASE}mapscrip/model/volumes.php`;
-    const URL_SCRIPTURES = `${URL_BASE}mapscrip/mapgetscrip.php`;
+    const ANIMATE_TIME = 350;
     const BOTTOM_PADDING = "<br /><br />";
     const CLASS_BOOKS = "books";
     const CLASS_CHAPTER = "chapter";
@@ -40,7 +38,8 @@ const Scriptures = (function () {
     const CLASS_VOLUME = "volume";
     const DIV_CRUMBS_NAV = "crumbnav";
     const DIV_SCRIPTURES_NAVIGATOR = "scripnav";
-    const DIV_SCRIPTURES = "scriptures";
+    const DIV_SCRIP1 = "scrip1";
+    const DIV_SCRIP2 = "scrip2";
     const INDEX_FLAG = 11;
     const INDEX_LATITUDE = 3;
     const INDEX_LONGITUDE = 4;
@@ -50,10 +49,11 @@ const Scriptures = (function () {
     const LOCATION_JERUSALEM = {lat: 31.7683, lng: 35.2137, zoom: 8};
     const LOCATION_USA = {lat: 39.5, lng: -98.5833, zoom: 5};
     const MAX_MARKER_ZOOM = 10;
-    const REQUEST_GET = "GET";
-    const REQUEST_STATUS_OK = 200;
-    const REQUEST_STATUS_ERROR = 400;
     const TAG_HEADER5 = "h5";
+    const URL_BASE = "https://scriptures.byu.edu/";
+    const URL_BOOKS = `${URL_BASE}mapscrip/model/books.php`;
+    const URL_VOLUMES = `${URL_BASE}mapscrip/model/volumes.php`;
+    const URL_SCRIPTURES = `${URL_BASE}mapscrip/mapgetscrip.php`;
 
     /*-------------------------------------------------------------------
      *                      PRIVATE VARIABLES
@@ -65,7 +65,7 @@ const Scriptures = (function () {
     /*-------------------------------------------------------------------
      *                      PRIVATE METHOD DECLARATIONS
      */
-    let ajax;
+    let animateType = "crossfade";
     let addMarker;
     let bookChapterValid;
     let booksGrid;
@@ -95,6 +95,8 @@ const Scriptures = (function () {
     let previousChapter;
     let setupMarkers;
     let showLocation;
+    let scripDivOnScreen = DIV_SCRIP1;
+    let scripDivOffScreen = DIV_SCRIP2;
     let titleForBookChapter;
     let volumesGridContent;
     let zoomMap;
@@ -211,25 +213,6 @@ const Scriptures = (function () {
     /*-------------------------------------------------------------------
      *         REMAINING PRIVATE METHODS (NAVIGATION STUFF), ALPHABETICAL
      */
-
-    ajax = function (url, successCallback, failureCallback, skipJsonParse) {
-        fetch(url)
-            .then(response => {
-                if (response.ok && skipJsonParse) {
-                    return response.text()
-                }
-                if (response.ok && !skipJsonParse) {
-                    return response.json()
-                }
-            })
-            .then(processedResponse => {
-                successCallback(processedResponse)
-            })
-            .catch(error => {
-                failureCallback(error)
-            })
-    };
-
     bookChapterValid = function (bookId, chapter) {
         let book = books[bookId];
         if (book === undefined || chapter < 0 || chapter > book.numChapters) {
@@ -355,23 +338,16 @@ const Scriptures = (function () {
         return currentHash;
     };
 
-    const DIV_SCRIP1 = "scrip1";
-    const DIV_SCRIP2 = "scrip2";
-    let scripDivOnScreen = DIV_SCRIP1;
-    let scripDivOffScreen = DIV_SCRIP2;
-    const ANIMATE_TIME = 350;
-    let animateType = "crossfade";
-
     let transition = function (volume, book, chapter, nextprevious) {
         animateType = nextprevious;
         changeHash(volume, book, chapter);
-    }
+    };
     let crossfade = function () {
-        $(`#${scripDivOffScreen}`).css({"left": "0px", "opacity": 0})
-        $(`#${scripDivOffScreen}`).animate({"opacity": 1, "z-index": 2}, {"duration": ANIMATE_TIME})
-        $(`#${scripDivOnScreen}`).animate({"opacity": 0, "z-index": 1}, {"duration": ANIMATE_TIME})
+        $(`#${scripDivOffScreen}`).css({"left": "0px", "opacity": 0});
+        $(`#${scripDivOffScreen}`).animate({"opacity": 1, "z-index": 2}, {"duration": ANIMATE_TIME});
+        $(`#${scripDivOnScreen}`).animate({"opacity": 0, "z-index": 1}, {"duration": ANIMATE_TIME});
         switchVisibleDivTracker();
-    }
+    };
 
     let switchVisibleDivTracker = function () {
         if (scripDivOnScreen === DIV_SCRIP1) {
@@ -381,7 +357,7 @@ const Scriptures = (function () {
             scripDivOnScreen = DIV_SCRIP1;
             scripDivOffScreen = DIV_SCRIP2;
         }
-    }
+    };
 
     getScripturesCallback = function (chapterHtml) {
         // Generate the next/previous buttons
@@ -430,21 +406,16 @@ const Scriptures = (function () {
         let volumesLoaded = false;
 
         fetch(URL_BOOKS)
-            .then(response => {
-                return response.json()
-            })
+            .then(response => {return response.json()})
             .then(function (data) {
                 books = data;
                 booksLoaded = true;
-
                 if (volumesLoaded) {
                     cacheBooks(callback);
                 }
             });
         fetch(URL_VOLUMES)
-            .then(response => {
-                return response.json()
-            })
+            .then(response => {return response.json()})
             .then(function (data) {
                 volumes = data;
                 volumesLoaded = true;
